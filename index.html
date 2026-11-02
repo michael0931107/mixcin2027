@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>2027 MIXCIN Academy Repertory Company AUDITION</title>
+  <style>
+    :root {
+      --primary-red: #E50914;
+      --deep-red: #9B111E;
+      --card-bg: rgba(14, 15, 20, 0.78);
+      --card-frosted: rgba(22, 24, 32, 0.75);
+      --border-light: rgba(255, 255, 255, 0.16);
+      --border-red: rgba(229, 9, 20, 0.55);
+      --text-main: #FFFFFF;
+      --text-sub: #D1D5DB;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    
+    body {
+      background-color: #070709;
+      color: var(--text-main);
+      line-height: 1.65;
+      padding: 24px 16px 140px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* 背景 YouTube 影片層 */
+    .video-background {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: -2; overflow: hidden; pointer-events: none;
+    }
+    #player {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 100vw; height: 56.25vw;
+      min-height: 100vh; min-width: 177.77vh;
+      transform: translate(-50%, -50%);
+      opacity: 0.9;
+      filter: saturate(1.1) contrast(1.05);
+      border: none;
+      pointer-events: none;
+    }
+    .video-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: radial-gradient(circle at center, rgba(8, 8, 10, 0.25) 0%, rgba(5, 5, 7, 0.7) 100%);
+      z-index: -1; pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    /* 懸浮按鈕工具列 - 支援安全距離避免底欄遮擋 */
+    .floating-tools {
+      position: fixed;
+      bottom: calc(30px + env(safe-area-inset-bottom, 16px));
+      right: 20px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .tool-btn {
+      background: rgba(18, 20, 26, 0.95);
+      border: 1.5px solid var(--primary-red);
+      color: #fff; padding: 13px 18px; border-radius: 30px;
+      font-size: 14px; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .tool-btn:active { transform: scale(0.95); }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    /* 觀看影片全螢幕沉浸模式 */
+    body.video-focus-mode .container {
+      opacity: 0.05;
+      pointer-events: none;
+      transform: translateY(20px);
+    }
+    body.video-focus-mode .video-overlay {
+      opacity: 0;
+    }
+
+    /* 比賽影片選擇 Modal 彈窗 */
+    .video-picker-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 100001;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+    .video-picker-modal.active { display: flex; }
+    .video-picker-content {
+      background: rgba(18, 20, 28, 0.98);
+      border: 1.5px solid var(--border-red);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 440px;
+      padding: 24px 20px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+      animation: modalFadeIn 0.25s ease-out;
+    }
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .picker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 10px;
+    }
+    .picker-title { font-size: 17px; font-weight: 800; color: #fff; }
+    .picker-close { font-size: 26px; color: #aaa; cursor: pointer; padding: 4px; line-height: 1; }
+    .picker-close:hover { color: #fff; }
+    
+    .video-option-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 55vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .video-option-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 14px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .video-option-btn:active {
+      background: rgba(229, 9, 20, 0.4);
+      border-color: var(--primary-red);
+    }
+    .video-option-btn.active-video {
+      background: rgba(229, 9, 20, 0.35);
+      border-color: var(--primary-red);
+      font-weight: 800;
+      box-shadow: 0 0 12px rgba(229, 9, 20, 0.4);
+    }
+    .video-option-name {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+
+    /* 精緻毛玻璃霧面卡片 */
+    .frosted-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      padding: 30px 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+      position: relative;
+      overflow: hidden;
+    }
+    .frosted-card::before {
+      content: "";
+      position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+      background: linear-gradient(90deg, transparent, var(--primary-red), transparent);
+    }
+
+    /* 品牌 LOGO 區塊 */
+    .brand-hero { text-align: center; margin-bottom: 22px; }
+    .brand-title-wrap {
+      display: inline-block;
+      position: relative;
+      padding-right: 18px;
+    }
+    .brand-title {
+      font-size: 40px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: var(--primary-red);
+      line-height: 1;
+    }
+    .brand-reg {
+      position: absolute;
+      top: -2px;
+      right: 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary-red);
+      line-height: 1;
+    }
+    .brand-subtitle {
+      font-size: 12px;
+      letter-spacing: 7px;
+      color: var(--primary-red);
+      font-weight: 800;
+      margin-top: 6px;
+      text-transform: uppercase;
+    }
+
+    .badge-pill {
+      display: inline-block;
+      background: rgba(229, 9, 20, 0.18);
+      color: #ffffff;
+      border: 1px solid var(--primary-red);
+      font-size: 12px; font-weight: 800; letter-spacing: 1.5px;
+      padding: 6px 16px; border-radius: 20px; margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+    h1 { font-size: 27px; font-weight: 900; line-height: 1.35; margin-bottom: 14px; }
+    .slogan { font-size: 19px; font-weight: 800; color: #ff5252; margin-bottom: 14px; letter-spacing: 0.5px; }
+    .lead-text { font-size: 15px; color: #e5e7eb; line-height: 1.8; margin-bottom: 12px; }
+
+    /* 16:9 圖片輪播區塊 */
+    .slider-wrapper {
+      position: relative;
+      margin: 22px 0;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border-light);
+      background: rgba(0,0,0,0.8);
+      touch-action: pan-y;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      width: 100%;
+      aspect-ratio: 16 / 9;
+    }
+    .slides-container {
+      display: flex;
+      transition: transform 0.4s ease-out;
+      width: 100%;
+      height: 100%;
+    }
+    .slide-item {
+      min-width: 100%;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: #0d0d11;
+      cursor: zoom-in;
+    }
+    .slider-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(0,0,0,0.65); color: #fff;
+      border: 1px solid rgba(255,255,255,0.25); width: 40px; height: 40px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 19px; z-index: 2; transition: 0.2s;
+    }
+    .slider-btn:hover { background: var(--primary-red); border-color: var(--primary-red); }
+    .slider-btn.prev { left: 10px; }
+    .slider-btn.next { right: 10px; }
+    .slider-dots {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 5px; z-index: 2; max-width: 85%; overflow-x: auto; padding: 4px 6px;
+      background: rgba(0, 0, 0, 0.55); border-radius: 20px;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+    .dot.active { background: var(--primary-red); width: 18px; border-radius: 4px; }
+
+    /* 燈箱放大效果 */
+    .lightbox-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 100000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      cursor: zoom-out;
+    }
+    .lightbox-modal.active { display: flex; }
+    .lightbox-img {
+      max-width: 95vw;
+      max-height: 90vh;
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      object-fit: contain;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 20px; right: 25px;
+      color: #fff;
+      font-size: 32px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* 培訓面向 */
+    .pillar-box {
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 4px solid var(--primary-red);
+      border-radius: 0 12px 12px 0;
+      padding: 16px 18px;
+      margin: 16px 0;
+    }
+    .pillar-title { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .sub-group { margin: 10px 0 6px 12px; font-size: 14.5px; }
+    .sub-group strong { color: #fca5a5; }
+
+    /* 為什麼選擇 MIXCIN？ */
+    .why-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin: 20px 0 10px;
+    }
+    .why-item {
+      background: var(--card-frosted);
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      padding: 18px 16px;
+      transition: all 0.25s;
+    }
+    .why-item:hover { border-color: var(--primary-red); transform: translateY(-2px); }
+    .why-item-title { font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .why-item-desc { font-size: 13px; color: var(--text-sub); line-height: 1.55; }
+
+    /* 徵選日程重點 */
+    .schedule-box {
+      background: rgba(229, 9, 20, 0.1);
+      border: 1px dashed var(--border-red);
+      border-radius: 14px;
+      padding: 18px;
+      margin: 16px 0;
+      font-size: 14.5px;
+    }
+    .schedule-item { margin-bottom: 10px; }
+    .schedule-item:last-child { margin-bottom: 0; }
+    .tag-highlight { color: #fca5a5; font-weight: 700; }
+
+    /* 官方 LINE 社群區塊 */
+    .line-community-box {
+      background: rgba(6, 199, 85, 0.14);
+      border: 1px solid rgba(6, 199, 85, 0.5);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    .line-community-btn {
+      display: inline-block;
+      width: 100%;
+      background: #06C755;
+      color: white;
+      text-decoration: none;
+      font-size: 15.5px;
+      font-weight: 800;
+      padding: 14px 20px;
+      border-radius: 10px;
+      margin-top: 10px;
+      box-shadow: 0 4px 16px rgba(6, 199, 85, 0.35);
+      transition: all 0.2s;
+    }
+    .line-community-btn:hover { background: #05b04b; transform: translateY(-1px); }
+
+    /* 最終決定權聲明卡片 */
+    .statement-box {
+      background: rgba(229, 9, 20, 0.1);
+      border: 1px solid var(--border-red);
+      border-left: 4px solid var(--primary-red);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 20px 0 10px;
+    }
+    .statement-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .statement-text {
+      font-size: 13.5px;
+      color: #f3f4f6;
+      line-height: 1.65;
+    }
+
+    /* 銀行匯款資訊卡 */
+    .bank-card {
+      background: rgba(24, 26, 34, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .copy-chip {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 3px 8px; border-radius: 6px; font-size: 12px;
+      margin-left: 8px; cursor: pointer; color: #ffffff;
+    }
+    .copy-chip:hover { background: var(--primary-red); color: #fff; }
+
+    /* 表單樣式 */
+    .form-group { margin-bottom: 20px; }
+    .form-row { display: flex; gap: 16px; }
+    .form-row .form-group { flex: 1; }
+    label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 8px; color: #f3f4f6; }
+    label span.req { color: var(--primary-red); margin-left: 4px; }
+    input[type="text"], input[type="date"], input[type="tel"], input[type="email"], select, textarea {
+      width: 100%;
+      padding: 13px 15px;
+      background: rgba(24, 25, 32, 0.85);
+      border: 1px solid var(--border-light);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary-red);
+      background: rgba(30, 32, 42, 0.95);
+      box-shadow: 0 0 10px rgba(229, 9, 20, 0.3);
+    }
+    .hint { font-size: 12.5px; color: #d1d5db; margin-top: 6px; }
+
+    /* 徵選組別核取框 */
+    .category-group { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 8px; }
+    .cat-checkbox-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .cat-checkbox-card:hover { border-color: rgba(255,255,255,0.4); }
+    .cat-checkbox-card.selected { background: rgba(229, 9, 20, 0.2); border-color: var(--primary-red); }
+    .cat-checkbox-card input { width: 20px; height: 20px; accent-color: var(--primary-red); cursor: pointer; }
+    .cat-text strong { display: block; font-size: 15px; color: #fff; }
+    .cat-text span { font-size: 12.5px; color: #d1d5db; }
+
+    /* 金額試算條 */
+    .amount-bar {
+      background: linear-gradient(90deg, rgba(229,9,20,0.2), rgba(155,17,30,0.3));
+      border: 1px solid var(--border-red);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .amount-text { font-size: 14px; font-weight: 700; color: #fff; }
+    .amount-val { font-size: 24px; font-weight: 900; color: #4ade80; }
+
+    .terms-box { display: flex; align-items: flex-start; gap: 10px; margin: 24px 0 16px; font-size: 13.5px; color: #f3f4f6; }
+    .terms-box input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--primary-red); }
+
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary-red), var(--deep-red));
+      color: #fff;
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      padding: 17px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(229, 9, 20, 0.4);
+      transition: all 0.25s;
+    }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(229, 9, 20, 0.6); }
+    .submit-btn:disabled { background: #4b5563; box-shadow: none; cursor: not-allowed; transform: none; }
+
+    #success-screen { display: none; text-align: center; padding: 40px 20px; }
+    .line-btn {
+      display: inline-block;
+      width: 100%;
+      background: #06C755;
+      color: white;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 800;
+      text-align: center;
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 18px;
+      box-shadow: 0 4px 18px rgba(6, 199, 85, 0.4);
+      transition: 0.2s;
+    }
+    .line-btn:hover { background: #05b04b; transform: translateY(-1px); }
+
+    @media (max-width: 600px) {
+      .form-row { flex-direction: column; gap: 0; }
+      .why-grid { grid-template-columns: 1fr; }
+      .brand-title { font-size: 34px; }
+      .floating-tools { bottom: 25px; right: 16px; gap: 10px; }
+      .tool-btn { padding: 12px 16px; font-size: 13.5px; }
+      .video-picker-content { max-height: 80vh; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 背景 YouTube 影片 -->
+<div class="video-background">
+  <div id="player"></div>
+</div>
+<div class="video-overlay"></div>
+
+<!-- 懸浮操作按鈕區 -->
+<div class="floating-tools">
+  <button type="button" id="videoPickerBtn" class="tool-btn" onclick="openVideoPicker()">
+    <span>🎬</span> <span>觀看比賽影片</span>
+  </button>
+  
+  <button type="button" id="focusModeBtn" class="tool-btn" style="display:none;" onclick="toggleFocusMode()">
+    <span>📋</span> <span>返回報名表單</span>
+  </button>
+  
+  <button type="button" id="audioToggleBtn" class="tool-btn" onclick="toggleAudio()">
+    <span id="audioIcon">🔇</span> <span id="audioText">開啟背景音效</span>
+  </button>
+</div>
+
+<!-- 比賽影片選擇 Modal 彈窗 -->
+<div id="videoPickerModal" class="video-picker-modal" onclick="closeVideoPickerOnBackdrop(event)">
+  <div class="video-picker-content">
+    <div class="picker-header">
+      <div class="picker-title">🎬 選擇欲觀看的比賽隊伍</div>
+      <div class="picker-close" onclick="closeVideoPicker()">&times;</div>
+    </div>
+    <div class="video-option-list" id="videoOptionList"></div>
+  </div>
+</div>
+
+<!-- 燈箱放大展示 Modal -->
+<div id="lightboxModal" class="lightbox-modal" onclick="closeLightbox()">
+  <span class="lightbox-close">&times;</span>
+  <img id="lightboxImg" class="lightbox-img" src="" alt="Enlarged Photo">
+</div>
+
+<div class="container">
+  
+  <div class="frosted-card" id="main-header">
+    <div class="brand-hero">
+      <div class="brand-title-wrap">
+        <span class="brand-title">MIXCIN</span>
+        <span class="brand-reg">®</span>
+      </div>
+      <div class="brand-subtitle">DANCE ACADEMY</div>
+    </div>
+
+    <div style="text-align:center;">
+      <div class="badge-pill">2027 MIXCIN Academy Repertory Company AUDITION</div>
+      <h1>MIXCIN 2027 競演團徵選</h1>
+      <div class="slogan">「站上國際競演舞台，專屬規劃孩子升學就業未來」</div>
+    </div>
+
+    <p class="lead-text">
+      由 <strong>MIXCIN 主理人 CINDY 老師</strong> 領軍，攜手街舞圈與世界各領域之頂尖師資親自培訓指導！我們不只打造扎實的身體素質與舞蹈技巧，更帶領團員征戰全台指標街舞賽事、指標商業演出、跨界合作，乃至走向國際競技舞台。
+    </p>
+    <p class="lead-text">
+      無論你想在賽事中突破自我、邁向國際，或感受團隊共創的熱血力量——<strong>【MIXCIN 競演團】</strong>正在尋找敢於發光的你，歡迎加入我們的大家族！
+    </p>
+
+    <!-- 16:9 圖片輪播區塊 (點擊可放大) -->
+    <div class="slider-wrapper" id="carouselWrapper">
+      <div class="slides-container" id="slidesContainer">
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/oXTRjhM.jpg');" onclick="openLightbox('https://i.meee.com.tw/oXTRjhM.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/TFH8a9B.png');" onclick="openLightbox('https://i.meee.com.tw/TFH8a9B.png')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/aI8cKUI.png');" onclick="openLightbox('https://i.meee.com.tw/aI8cKUI.png')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/fbHgyWW.jpg');" onclick="openLightbox('https://i.meee.com.tw/fbHgyWW.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/TTYOqYG.jpg');" onclick="openLightbox('https://i.meee.com.tw/TTYOqYG.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/qA7mtCr.jpg');" onclick="openLightbox('https://i.meee.com.tw/qA7mtCr.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/e6fRyVB.jpg');" onclick="openLightbox('https://i.meee.com.tw/e6fRyVB.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/yPYfJDY.jpg');" onclick="openLightbox('https://i.meee.com.tw/yPYfJDY.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/pY7EAja.jpg');" onclick="openLightbox('https://i.meee.com.tw/pY7EAja.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/BoBBbWe.jpg');" onclick="openLightbox('https://i.meee.com.tw/BoBBbWe.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/HQNbXYc.jpg');" onclick="openLightbox('https://i.meee.com.tw/HQNbXYc.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/krWYZUu.jpg');" onclick="openLightbox('https://i.meee.com.tw/krWYZUu.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/m72sNwa.jpg');" onclick="openLightbox('https://i.meee.com.tw/m72sNwa.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/zaIPEem.jpg');" onclick="openLightbox('https://i.meee.com.tw/zaIPEem.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/tc5JKiU.jpg');" onclick="openLightbox('https://i.meee.com.tw/tc5JKiU.jpg')"></div>
+        <div class="slide-item" style="background-image: url('https://i.meee.com.tw/i4wKpZN.jpg');" onclick="openLightbox('https://i.meee.com.tw/i4wKpZN.jpg')"></div>
+      </div>
+      <button class="slider-btn prev" onclick="moveSlide(-1)">&#10094;</button>
+      <button class="slider-btn next" onclick="moveSlide(1)">&#10095;</button>
+      <div class="slider-dots" id="sliderDots"></div>
+    </div>
+
+    <!-- 三大培訓面向 × 五大招募項目 -->
+    <div style="margin: 24px 0 14px;">
+      <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 12px;">
+        🔴 MIXCIN 2027 競演團 三大培訓面向 × 五大招募項目
+      </h3>
+
+      <div class="pillar-box">
+        <div class="pillar-title">🔴 面向一｜競技賽事部・【比賽團】針對國際與全台各大賽事制定高強度專項排練</div>
+        <div class="sub-group">
+          <strong>🔺 街舞組（Street Dance Unit）：</strong><br>
+          • 培訓核心：扎實街舞基礎律動、排舞整齊度、舞台氣場與多元風格整合<br>
+          • 目標定位：征戰國際與全台各級街舞大賽、爭取最高榮譽
+        </div>
+        <div class="sub-group">
+          <strong>🔺 K-POP 組（K-POP Unit）：</strong><br>
+          • 培訓核心：KPOP表情管理、舞台魅力演繹與鏡頭感訓練<br>
+          • 目標定位：專攻各類 K-POP排舞與 Cover賽事
+        </div>
+        <div class="sub-group">
+          <strong>🔺 Solo & Battle 組（Solo & Battle Unit）：</strong><br>
+          • 培訓核心：音樂理解度、即興應變能力、個人獨特風格架構與對戰心理抗壓<br>
+          • 目標定位：專攻國際與全台各大Battle個人與團體賽事與獨立 Showcase 舞台
+        </div>
+      </div>
+
+      <div class="pillar-box">
+        <div class="pillar-title">🔴 面向二｜國際演出部・【國際舞者團】打造具備表演感與專業素質之頂尖舞者</div>
+        <div class="sub-group">
+          • 培訓核心：針對表情、肢體語言與快速記舞加強著墨<br>
+          • 目標定位：參與海內外表演與商演，並著重訓練唱跳與表演感塑造
+        </div>
+      </div>
+
+      <div class="pillar-box">
+        <div class="pillar-title">🔴 面向三｜舞蹈啦啦部・【舞蹈啦啦團】挑戰全國放眼亞洲與世界級錦標賽</div>
+        <div class="sub-group">
+          • 培訓核心：團隊共鳴與精神氛圍營造，特技練習與挑戰國手代表資格<br>
+          • 目標定位：參與舞蹈啦啦競賽，爭取國手資格代表中華隊參加亞洲與世界錦標賽
+        </div>
+      </div>
+    </div>
+
+    <!-- 徵選內容日程與時段 -->
+    <div class="schedule-box">
+      <div class="schedule-item">📅 <strong>統一徵選日期：</strong>2026/11/15 (週日)</div>
+      <div class="schedule-item">📍 <strong>徵選地點：</strong>MIXCIN 雙星館（台北市中正區忠孝西路一段21號2樓）</div>
+      <div class="schedule-item">🎯 <strong>甄選內容：</strong>現場教學排舞乙段並現場直接考核（※若會側翻空翻等特技請現場準備展示）</div>
+      <div class="schedule-item">💰 <strong>甄選費用：</strong>一組 200 元 ｜ 兩組 300 元 ｜ 三組 350 元</div>
+      
+      <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.2); margin: 12px 0;">
+
+      <div class="schedule-item">
+        • <strong>U12組（8-12歲）：</strong>10:30 - 11:45<br>
+        <span class="tag-highlight">※ 欲徵選【舞蹈啦啦團】者請參加 U12 / U18 組徵選（按年齡選組）</span>
+      </div>
+      <div class="schedule-item">
+        • <strong>U18組（12-18歲）：</strong>11:45 - 13:00<br>
+        <span class="tag-highlight">※ 欲徵選【舞蹈啦啦團】者請參加 U12 / U18 組徵選（按年齡選組）</span>
+      </div>
+      <div class="schedule-item">
+        • <strong>KPOP組（8-15歲）：</strong>13:00 - 14:30<br>
+        <span class="tag-highlight">※ 欲徵選【國際舞者團】者請參加 KPOP 組徵選</span>
+      </div>
+    </div>
+
+    <!-- 說明會與注意事項 -->
+    <div style="font-size: 13.5px; color: #f3f4f6; margin: 14px 0;">
+      <p style="font-weight: 800; color: #fff; margin-bottom: 6px;">🔴 競演團家長說明會：</p>
+      <p>• 日期：11/22 (日)｜時間：預計晚上｜地點：待公布</p>
+      
+      <p style="font-weight: 800; color: #fff; margin: 12px 0 6px;">🔴 注意事項：</p>
+      <p>1️⃣ 甄選者只要年齡符合，即可參加該組別甄選（不限幾項）。例：12 歲徵選者共可報名 街舞U12組、U18組 與 KPOP組（共三組甄選考核）。</p>
+      <p>2️⃣ 為確保甄選過程順暢及維護場地秩序，甄選期間請家長勿於教室內外逗留，並請於甄選時間結束後，再行返回接送孩子。感謝各位家長的配合與體諒。</p>
+      <p>3️⃣ 甄選當日請穿著舒適且好運動的服裝與運動鞋，並自行準備飲用水。</p>
+      <p>4️⃣ 相關甄選辦法依 MIXCIN 舞蹈培訓機構為主。</p>
+    </div>
+
+    <!-- 徵選最終決定權聲明 -->
+    <div class="statement-box">
+      <div class="statement-title">⚖️ 徵選最終決定權聲明</div>
+      <div class="statement-text">
+        本次徵選之所有相關事宜，包括報名資格、評選標準、入選名單及最終錄取結果，均由 <strong>MIXCIN 保有最終決定權</strong>。MIXCIN 有權依實際徵選情況進行調整，所有徵選結果以 MIXCIN 最終公告為準。
+      </div>
+    </div>
+
+    <!-- 為什麼選擇 MIXCIN？ -->
+    <div style="margin-top: 26px;">
+      <h3 style="font-size: 18px; font-weight: 800; color: #fff; text-align: center;">
+        ✨ 為什麼選擇 MIXCIN？
+      </h3>
+      <div class="why-grid">
+        <div class="why-item">
+          <div class="why-item-title">🏆 世界頂尖師資陣容</div>
+          <div class="why-item-desc">世界級頂尖編舞師與專業賽事評審親自指導，傳授最純正觀念與技巧。</div>
+        </div>
+        <div class="why-item">
+          <div class="why-item-title">📈 完整實戰履歷與升學規劃</div>
+          <div class="why-item-desc">制度化保障參賽與大型公演經歷，全面累積高抗壓實戰舞台經驗並專屬規劃孩子們升學就業未來。</div>
+        </div>
+        <div class="why-item">
+          <div class="why-item-title">🎬 專業作品產出</div>
+          <div class="why-item-desc">定期規劃業界高規格專業動態影像與概念片紀錄，建立專屬影像履歷。</div>
+        </div>
+        <div class="why-item">
+          <div class="why-item-title">🌐 跨界多元機會</div>
+          <div class="why-item-desc">涵蓋國內外各大街舞賽事、商業演出通告與跨國海外交流競技平台。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 報名表單 -->
+  <form id="audition-form" onsubmit="handleFormSubmit(event)">
+    <div class="frosted-card">
+      <div style="font-size: 19px; font-weight: 800; margin-bottom: 20px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+        📝 徵選者基本資料
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>1. 徵選者姓名<span class="req">*</span></label>
+          <input type="text" name="name" placeholder="請填寫學生真實姓名" required>
+        </div>
+        <div class="form-group">
+          <label>2. 徵選者性別<span class="req">*</span></label>
+          <select name="gender" required>
+            <option value="">請選擇性別</option>
+            <option value="女性">女性</option>
+            <option value="男性">男性</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>3. 徵選者出生年月日<span class="req">*</span></label>
+          <input type="date" id="birthdate" name="birthdate" onchange="calculateAge()" required>
+          <div class="hint" id="ageDisplay" style="color: #4ade80; font-weight: 700;">年齡：請選擇出生日期</div>
+        </div>
+        <div class="form-group">
+          <label>4. 目前學齡 (年級)<span class="req">*</span></label>
+          <select name="grade" required>
+            <option value="">請選擇目前就讀年級</option>
+            <option value="國小3年級">國小 3 年級</option>
+            <option value="國小4年級">國小 4 年級</option>
+            <option value="國小5年級">國小 5 年級</option>
+            <option value="國小6年級">國小 6 年級</option>
+            <option value="國小7年級(國中1年級)">國中 1 年級 (七年級)</option>
+            <option value="國中2年級(8年級)">國中 2 年級 (八年級)</option>
+            <option value="國中3年級(9年級)">國中 3 年級 (九年級)</option>
+            <option value="高中1年級">高中 1 年級</option>
+            <option value="高中2年級">高中 2 年級</option>
+            <option value="高中3年級">高中 3 年級</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>5. 就讀學校<span class="req">*</span></label>
+        <input type="text" name="school" placeholder="例：台北市立仁愛國中" required>
+      </div>
+
+      <div class="form-group">
+        <label>6. 徵選組別 (可複選，依年齡符合者皆可報名)<span class="req">*</span></label>
+        <div class="category-group">
+          <label class="cat-checkbox-card" id="card-u12">
+            <input type="checkbox" name="categories" value="U12組 (8-12歲)" onchange="updateFeeCalc()">
+            <div class="cat-text">
+              <strong>U12 組 (年齡 8-12 歲)</strong>
+              <span>時間：10:30-11:45（欲選舞蹈啦啦團請選此或U18組）</span>
+            </div>
+          </label>
+          <label class="cat-checkbox-card" id="card-u18">
+            <input type="checkbox" name="categories" value="U18組 (12-18歲)" onchange="updateFeeCalc()">
+            <div class="cat-text">
+              <strong>U18 組 (年齡 12-18 歲)</strong>
+              <span>時間：11:45-13:00（欲選舞蹈啦啦團請選此或U12組）</span>
+            </div>
+          </label>
+          <label class="cat-checkbox-card" id="card-kpop">
+            <input type="checkbox" name="categories" value="KPOP組 (8-15歲)" onchange="updateFeeCalc()">
+            <div class="cat-text">
+              <strong>KPOP 組 (年齡 8-15 歲)</strong>
+              <span>時間：13:00-14:30（欲選國際舞者團請選此組）</span>
+            </div>
+          </label>
+        </div>
+        <div class="hint">可複選多組，例：12歲徵選者可同時報名 U12、U18 與 KPOP 組</div>
+      </div>
+
+      <!-- 金額試算條 -->
+      <div class="amount-bar">
+        <span class="amount-text">已選擇組數與應繳金額：</span>
+        <span class="amount-val" id="feeDisplay">NT$ 0</span>
+      </div>
+
+      <div class="form-group">
+        <label>7. 徵選者舞齡與舞蹈風格<span class="req">*</span></label>
+        <input type="text" name="danceExperience" placeholder="例：Hip Hop 2年、Jazz 1年（自學者可填寫自學）" required>
+        <div class="hint">請填寫徵選學習舞蹈時間與擅長風格</div>
+      </div>
+
+      <div class="form-group">
+        <label>8. 徵選者經歷 (培訓、賽事或演出經歷)</label>
+        <textarea name="achievements" rows="3" placeholder="例：曾參與XXX舞蹈教室團員班2年，曾獲XXX盃街舞大賽冠軍（如無請填「無」）"></textarea>
+      </div>
+
+      <div style="font-size: 19px; font-weight: 800; margin: 30px 0 18px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+        👨‍👩‍👦 家長 (聯絡人) 資料
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>9. 家長 (聯絡人) 姓名<span class="req">*</span></label>
+          <input type="text" name="parentName" placeholder="請填寫家長中文全名" required>
+        </div>
+        <div class="form-group">
+          <label>10. 家長 (聯絡人) 電話<span class="req">*</span></label>
+          <input type="tel" name="parentPhone" placeholder="例：0912-345-678" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>11. 家長 (聯絡人) Email<span class="req">*</span></label>
+          <input type="email" name="parentEmail" placeholder="報名成功將發送確認信至此信箱" required>
+          <div class="hint">請確認信箱正確，系統將寄送包含詳細資料的確認信</div>
+        </div>
+        <div class="form-group">
+          <label>12. 家長 (聯絡人) LINE ID<span class="req">*</span></label>
+          <input type="text" name="parentLineId" placeholder="請填寫常用 LINE ID 以便聯繫" required>
+        </div>
+      </div>
+
+      <!-- 匯款資訊卡 -->
+      <div class="bank-card">
+        <div style="font-weight: 800; color: #ff4d4f; font-size: 16px; margin-bottom: 8px;">
+          🔺 報名費轉帳匯款帳號資訊
+        </div>
+        <p>• <strong>銀行代碼：</strong>國泰世華（013）</p>
+        <p>• <strong>分行：</strong>松山分行</p>
+        <p>• <strong>戶名：</strong>羅文婷</p>
+        <p>• <strong>帳號：</strong>
+          <span style="font-size: 17px; font-weight: 800; color: #fff; letter-spacing: 0.5px;" id="accountNum">037506018600</span>
+          <span class="copy-chip" onclick="copyAccount()">複製帳號</span>
+        </p>
+        <div style="margin-top: 10px; font-size: 13px; color: #fca5a5;">
+          ※ 收費標準：選 1 組 200 元 ｜ 選 2 組 300 元 ｜ 選 3 組 350 元
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>匯款末五碼<span class="req">*</span></label>
+        <input type="text" name="remitLast5" placeholder="請填寫您轉出帳號之後五碼數字" required>
+        <div class="hint">請確認已完成匯款轉帳後再送出報名表單</div>
+      </div>
+
+      <!-- 官方 LINE 社群區塊（置於送出按鈕前） -->
+      <div class="line-community-box">
+        <p style="font-size: 15px; font-weight: 800; color: #4ade80; margin-bottom: 4px;">
+          💬 您已被邀請加入「MIXCIN團員班甄選」！
+        </p>
+        <p style="font-size: 13.5px; color: #ffffff;">
+          所有甄選即時資訊、報到序號與時程安排皆於專屬社群發布，請點選下方連結加入：
+        </p>
+        <a href="https://line.me/ti/g2/ejeRALG1wHptjsP41VJPm9959P4xvJ0vt2nTFw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" class="line-community-btn">
+          👉 點此直接開啟加入「MIXCIN團員班甄選」LINE社群
+        </a>
+      </div>
+
+      <div class="terms-box">
+        <input type="checkbox" id="termsCheck" required>
+        <label for="termsCheck">
+          我已詳閱並同意遵守 MIXCIN 2027 競演團徵選相關規章、家長接送規範與活動辦法，並完全理解且同意由 <strong>MIXCIN 保有徵選資格、評選標準及最終錄取結果之最終決定權</strong>。<span class="req">*</span>
+        </label>
+      </div>
+
+      <button type="submit" id="submitBtn" class="submit-btn">立即確認送出徵選報名</button>
+    </div>
+  </form>
+
+  <!-- 成功畫面 -->
+  <div class="frosted-card" id="success-screen">
+    <div style="font-size: 42px; margin-bottom: 10px;">🎉</div>
+    <h2 style="font-size: 25px; font-weight: 900; margin-bottom: 12px; color: #fff;">報名資料已成功送出！</h2>
+    <p style="color: var(--text-sub); margin-bottom: 20px;">感謝您報名 MIXCIN 2027 競演團徵選。系統已將報名明細寄送至您的 Email 信箱，工作人員將盡速核對您的匯款資料！</p>
+    
+    <div style="background: rgba(229, 9, 20, 0.2); border: 1px solid var(--border-red); border-radius: 12px; padding: 18px; text-align: left; margin-bottom: 20px;">
+      <p style="color: #ff4d4f; font-weight: bold; margin-bottom: 6px;">⚠️ 最重要的最後一步：</p>
+      <p style="font-size: 14px; line-height: 1.6;">
+        請<strong>務必點擊下方按鈕加入「MIXCIN團員班甄選」官方 LINE 社群</strong>，所有報到序號、甄選最新通知與時程安排將第一時間於社群內發布！
+      </p>
+    </div>
+
+    <a href="https://line.me/ti/g2/ejeRALG1wHptjsP41VJPm9959P4xvJ0vt2nTFw?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" class="line-btn">
+      👉 立即點此加入官方 LINE 徵選社群
+    </a>
+
+    <div style="margin-top: 24px; font-size: 13px; color: #d1d5db; line-height: 1.6;">
+      🔺 如有徵選相關問題，歡迎詢問 MIXCIN® 官方 LINE ID：<strong>@mixcin</strong><br>
+      或聯繫 <strong>sun10190</strong>（柏豪老師）
+    </div>
+  </div>
+
+</div>
+
+<!-- 載入官方 YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  // 🔴 請在此替換為您的 Google Apps Script 部署網址（結尾為 /exec）
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrs4908_y0x4wu5jHC64V3k0hPzXz9u6u78Q8f4x2j-b5kQ_exec/exec";
+
+  // 比賽隊伍影片資料庫
+  const videoPool = [
+    { id: 'nJiQiNA7Dfg', start: 6,  name: 'THE MIXCIN' },
+    { id: '60UYWhxd2do', start: 25, name: 'MIXCIN BOSSy' },
+    { id: 'yixBo_2zOak', start: 36, name: 'MIXCIN WOW' },
+    { id: 'cbNOPbn7QWc', start: 22, name: 'MIXCIN SHERO' },
+    { id: 'kclLx0bBev0', start: 31, name: 'MIXCIN NOVA' },
+    { id: 'D0jWlDYIGQo', start: 15, name: 'MIXCIN FLIPZY' },
+    { id: 'g2yuWyRRURs', start: 42, name: 'MIXCIN ZAZA' },
+    { id: 'HHC-W342FrQ', start: 43, name: 'MIXCIN HER' },
+    { id: '4Vzt1TQAdvc', start: 5,  name: 'MIXCIN PASSION' }
+  ];
+
+  // 初始二選一
+  const initialChoices = [0, 1];
+  let currentVideoIndex = initialChoices[Math.floor(Math.random() * initialChoices.length)];
+
+  let player = null;
+  let isAudioPlaying = false;
+  let isFocusMode = false;
+
+  // 正確初始化 API
+  function onYouTubeIframeAPIReady() {
+    const cur = videoPool[currentVideoIndex];
+    player = new YT.Player('player', {
+      videoId: cur.id,
+      playerVars: {
+        'autoplay': 1,
+        'mute': 1,
+        'start': cur.start,
+        'loop': 1,
+        'playlist': cur.id,
+        'controls': 0,
+        'showinfo': 0,
+        'rel': 0,
+        'modestbranding': 1,
+        'playsinline': 1,
+        'enablejsapi': 1
+      },
+      events: {
+        'onReady': function(e) {
+          e.target.mute();
+          e.target.playVideo();
+        },
+        'onStateChange': function(e) {
+          if (e.data === YT.PlayerState.ENDED) {
+            player.seekTo(videoPool[currentVideoIndex].start);
+            player.playVideo();
+          }
+        }
+      }
+    });
+
+    renderVideoPickerOptions();
+  }
+
+  function renderVideoPickerOptions() {
+    const container = document.getElementById('videoOptionList');
+    if (!container) return;
+    container.innerHTML = '';
+    videoPool.forEach((item, index) => {
+      const btn = document.createElement('div');
+      btn.className = 'video-option-btn' + (index === currentVideoIndex ? ' active-video' : '');
+      btn.onclick = function() { selectVideo(index); };
+      btn.innerHTML = `<span class="video-option-name">${item.name}</span>`;
+      container.appendChild(btn);
+    });
+  }
+
+  function openVideoPicker() {
+    renderVideoPickerOptions();
+    const modal = document.getElementById('videoPickerModal');
+    if (modal) modal.classList.add('active');
+  }
+
+  function closeVideoPicker() {
+    const modal = document.getElementById('videoPickerModal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function closeVideoPickerOnBackdrop(e) {
+    if (e.target.id === 'videoPickerModal') {
+      closeVideoPicker();
+    }
+  }
+
+  // 切換隊伍
+  function selectVideo(index) {
+    currentVideoIndex = index;
+    const v = videoPool[index];
+    closeVideoPicker();
+
+    if (player && typeof player.loadVideoById === 'function') {
+      player.loadVideoById({
+        videoId: v.id,
+        startSeconds: v.start
+      });
+      if (!isAudioPlaying) {
+        toggleAudio();
+      }
+    }
+
+    if (!isFocusMode) {
+      setFocusMode(true);
+    }
+  }
+
+  function setFocusMode(enable) {
+    isFocusMode = enable;
+    const focusBtn = document.getElementById('focusModeBtn');
+    const pickerBtn = document.getElementById('videoPickerBtn');
+
+    if (isFocusMode) {
+      document.body.classList.add('video-focus-mode');
+      if (focusBtn) focusBtn.style.display = 'flex';
+      if (pickerBtn) pickerBtn.innerHTML = '<span>🎬</span> <span>換看其他隊伍</span>';
+    } else {
+      document.body.classList.remove('video-focus-mode');
+      if (focusBtn) focusBtn.style.display = 'none';
+      if (pickerBtn) pickerBtn.innerHTML = '<span>🎬</span> <span>觀看比賽影片</span>';
+    }
+  }
+
+  function toggleFocusMode() {
+    setFocusMode(!isFocusMode);
+  }
+
+  // 音訊切換
+  function toggleAudio() {
+    if (!player) return;
+    
+    if (player.getPlayerState && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+      player.playVideo();
+    }
+
+    if (!isAudioPlaying) {
+      player.unMute();
+      player.setVolume(85);
+      isAudioPlaying = true;
+      document.getElementById('audioIcon').innerText = "🔊";
+      document.getElementById('audioText').innerText = "關閉音樂";
+      document.getElementById('audioToggleBtn').style.background = "#E50914";
+    } else {
+      player.mute();
+      isAudioPlaying = false;
+      document.getElementById('audioIcon').innerText = "🔇";
+      document.getElementById('audioText').innerText = "開啟背景音效";
+      document.getElementById('audioToggleBtn').style.background = "rgba(18, 20, 26, 0.95)";
+    }
+  }
+
+  // 16 張圖片輪播邏輯
+  let currentSlide = 0;
+  const totalSlides = 16;
+
+  function initDots() {
+    const dotsContainer = document.getElementById('sliderDots');
+    if (!dotsContainer) return;
+    dotsContainer.innerHTML = '';
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'dot' + (i === 0 ? ' active' : '');
+      dot.onclick = () => goToSlide(i);
+      dotsContainer.appendChild(dot);
+    }
+  }
+
+  function updateCarousel() {
+    const container = document.getElementById('slidesContainer');
+    if (container) {
+      container.style.transform = `translateX(-${currentSlide * 100}%)`;
+    }
+    const dots = document.querySelectorAll('.dot');
+    dots.forEach((dot, idx) => {
+      dot.classList.toggle('active', idx === currentSlide);
+    });
+  }
+
+  function moveSlide(step) {
+    currentSlide = (currentSlide + step + totalSlides) % totalSlides;
+    updateCarousel();
+  }
+
+  function goToSlide(index) {
+    currentSlide = index;
+    updateCarousel();
+  }
+
+  function openLightbox(url) {
+    const img = document.getElementById('lightboxImg');
+    const modal = document.getElementById('lightboxModal');
+    if (img && modal) {
+      img.src = url;
+      modal.classList.add('active');
+    }
+  }
+
+  function closeLightbox() {
+    const modal = document.getElementById('lightboxModal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  let touchStartX = 0;
+  let touchEndX = 0;
+  const sliderEl = document.getElementById('carouselWrapper');
+  if (sliderEl) {
+    sliderEl.addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    sliderEl.addEventListener('touchend', e => {
+      touchEndX = e.changedTouches[0].screenX;
+      if (touchStartX - touchEndX > 45) moveSlide(1);
+      if (touchEndX - touchStartX > 45) moveSlide(-1);
+    }, { passive: true });
+  }
+
+  initDots();
+
+  let calculatedAgeVal = 0;
+  function calculateAge() {
+    const bDateInput = document.getElementById('birthdate').value;
+    const display = document.getElementById('ageDisplay');
+    if (!bDateInput) {
+      display.innerText = "年齡：請選擇出生日期";
+      return;
+    }
+    const birthDate = new Date(bDateInput);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    calculatedAgeVal = age >= 0 ? age : 0;
+    display.innerText = `年齡：${calculatedAgeVal} 歲`;
+  }
+
+  let currentFee = 0;
+  function updateFeeCalc() {
+    const checkboxes = document.querySelectorAll('input[name="categories"]:checked');
+    const count = checkboxes.length;
+
+    document.querySelectorAll('.cat-checkbox-card').forEach(card => {
+      const cb = card.querySelector('input');
+      card.classList.toggle('selected', cb.checked);
+    });
+
+    if (count === 1) currentFee = 200;
+    else if (count === 2) currentFee = 300;
+    else if (count >= 3) currentFee = 350;
+    else currentFee = 0;
+
+    const feeEl = document.getElementById('feeDisplay');
+    if (feeEl) feeEl.innerText = `NT$ ${currentFee}`;
+  }
+
+  function copyAccount() {
+    const acct = document.getElementById('accountNum').innerText;
+    navigator.clipboard.writeText(acct).then(() => {
+      alert('已複製國泰世華帳號：' + acct);
+    });
+  }
+
+  // 跨網域送出報名資料至 Google Apps Script 後端
+  function handleFormSubmit(e) {
+    e.preventDefault();
+    const selectedCats = Array.from(document.querySelectorAll('input[name="categories"]:checked')).map(cb => cb.value);
+    
+    if (selectedCats.length === 0) {
+      alert('請至少勾選一項「徵選組別」！');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerText = "報名資料傳送中，請稍候...";
+
+    const f = document.getElementById('audition-form');
+    const payload = {
+      name: f.name.value,
+      gender: f.gender.value,
+      birthdate: f.birthdate.value,
+      age: calculatedAgeVal,
+      grade: f.grade.value,
+      school: f.school.value,
+      categories: selectedCats,
+      amount: currentFee,
+      danceExperience: f.danceExperience.value,
+      achievements: f.achievements.value,
+      parentName: f.parentName.value,
+      parentPhone: f.parentPhone.value,
+      parentEmail: f.parentEmail.value,
+      parentLineId: f.parentLineId.value,
+      remitLast5: f.remitLast5.value,
+      agreeTerms: document.getElementById('termsCheck').checked
+    };
+
+    fetch(GAS_WEB_APP_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(() => {
+      f.style.display = 'none';
+      document.getElementById('main-header').style.display = 'none';
+      document.getElementById('success-screen').style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    })
+    .catch(err => {
+      alert('送出時發生問題：' + err);
+      btn.disabled = false;
+      btn.innerText = "重新送出";
+    });
+  }
+</script>
+
+</body>
+</html>
