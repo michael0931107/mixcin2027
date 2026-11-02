@@ -52,7 +52,7 @@
       transition: opacity 0.4s ease;
     }
 
-    /* 懸浮按鈕工具列 - 支援安全距離避免底欄遮擋 */
+    /* 懸浮按鈕工具列 */
     .floating-tools {
       position: fixed;
       bottom: calc(30px + env(safe-area-inset-bottom, 16px));
@@ -528,7 +528,7 @@
 </head>
 <body>
 
-<!-- 背景 YouTube 影片 -->
+<!-- 背景 YouTube 影片容器 -->
 <div class="video-background">
   <div id="player"></div>
 </div>
@@ -762,7 +762,7 @@
             <option value="國小4年級">國小 4 年級</option>
             <option value="國小5年級">國小 5 年級</option>
             <option value="國小6年級">國小 6 年級</option>
-            <option value="國小7年級(國中1年級)">國中 1 年級 (七年級)</option>
+            <option value="國中1年級(7年級)">國中 1 年級 (七年級)</option>
             <option value="國中2年級(8年級)">國中 2 年級 (八年級)</option>
             <option value="國中3年級(9年級)">國中 3 年級 (九年級)</option>
             <option value="高中1年級">高中 1 年級</option>
@@ -872,7 +872,7 @@
         <div class="hint">請確認已完成匯款轉帳後再送出報名表單</div>
       </div>
 
-      <!-- 官方 LINE 社群區塊（置於送出按鈕前） -->
+      <!-- 官方 LINE 社群區塊 -->
       <div class="line-community-box">
         <p style="font-size: 15px; font-weight: 800; color: #4ade80; margin-bottom: 4px;">
           💬 您已被邀請加入「MIXCIN團員班甄選」！
@@ -924,8 +924,8 @@
 <!-- 載入官方 YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-  // 🔴 請在此替換為您的 Google Apps Script 部署網址（結尾為 /exec）
-  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrs4908_y0x4wu5jHC64V3k0hPzXz9u6u78Q8f4x2j-b5kQ_exec/exec";
+  // 已帶入您專屬的 Google Apps Script 發布端點
+  const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrs4908_y0x4wu5jHCEWR2rVaYESzpKkjkmULFbzp3gwP_49WWM_dOt1X1aTLfj0eaLg/exec";
 
   // 比賽隊伍影片資料庫
   const videoPool = [
@@ -948,7 +948,6 @@
   let isAudioPlaying = false;
   let isFocusMode = false;
 
-  // 正確初始化 API
   function onYouTubeIframeAPIReady() {
     const cur = videoPool[currentVideoIndex];
     player = new YT.Player('player', {
@@ -1013,7 +1012,6 @@
     }
   }
 
-  // 切換隊伍
   function selectVideo(index) {
     currentVideoIndex = index;
     const v = videoPool[index];
@@ -1054,10 +1052,8 @@
     setFocusMode(!isFocusMode);
   }
 
-  // 音訊切換
   function toggleAudio() {
     if (!player) return;
-    
     if (player.getPlayerState && player.getPlayerState() !== YT.PlayerState.PLAYING) {
       player.playVideo();
     }
@@ -1078,7 +1074,7 @@
     }
   }
 
-  // 16 張圖片輪播邏輯
+  // 16 張輪播大圖
   let currentSlide = 0;
   const totalSlides = 16;
 
@@ -1190,7 +1186,7 @@
     });
   }
 
-  // 跨網域送出報名資料至 Google Apps Script 後端
+  // 跨網域送出：採用 form-urlencoded 封裝，保證 GAS doPost 順利寫入試算表
   function handleFormSubmit(e) {
     e.preventDefault();
     const selectedCats = Array.from(document.querySelectorAll('input[name="categories"]:checked')).map(cb => cb.value);
@@ -1224,11 +1220,15 @@
       agreeTerms: document.getElementById('termsCheck').checked
     };
 
+    const postData = 'data=' + encodeURIComponent(JSON.stringify(payload));
+
     fetch(GAS_WEB_APP_URL, {
       method: "POST",
       mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: postData
     })
     .then(() => {
       f.style.display = 'none';
@@ -1237,7 +1237,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     })
     .catch(err => {
-      alert('送出時發生問題：' + err);
+      alert('送出失敗：' + err);
       btn.disabled = false;
       btn.innerText = "重新送出";
     });
