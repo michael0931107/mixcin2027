@@ -536,6 +536,11 @@
 
 <!-- 懸浮操作按鈕區 -->
 <div class="floating-tools">
+  <!-- 專為 Google Sites iframe 環境準備的跳轉按鈕（在 Google Sites 內自動亮起，獨立版自動隱藏） -->
+  <button type="button" id="openExternalBtn" class="tool-btn" style="display: none; background: #E50914; border-color: #FFFFFF; font-size: 14px;" onclick="openOriginalSite()">
+    <span>🚀</span> <span>前往獨立完整版 (開啟音效與全螢幕) ↗</span>
+  </button>
+
   <button type="button" id="videoPickerBtn" class="tool-btn" onclick="openVideoPicker()">
     <span>🎬</span> <span>觀看比賽影片</span>
   </button>
@@ -924,8 +929,11 @@
 <!-- 載入官方 YouTube IFrame API -->
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-  // 已帶入您專屬的 Google Apps Script 發布端點
+  // 專屬 Google Apps Script 發布端點
   const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwrs4908_y0x4wu5jHCEWR2rVaYESzpKkjkmULFbzp3gwP_49WWM_dOt1X1aTLfj0eaLg/exec";
+  
+  // 您的 GitHub Pages 獨立網址
+  const GITHUB_SITE_URL = "https://michael0931107.github.io/mixcin2027/";
 
   // 比賽隊伍影片資料庫
   const videoPool = [
@@ -940,7 +948,7 @@
     { id: '4Vzt1TQAdvc', start: 5,  name: 'MIXCIN PASSION' }
   ];
 
-  // 初始二選一
+  // 初始二選一隨機播放
   const initialChoices = [0, 1];
   let currentVideoIndex = initialChoices[Math.floor(Math.random() * initialChoices.length)];
 
@@ -948,6 +956,43 @@
   let isAudioPlaying = false;
   let isFocusMode = false;
 
+  // 🔴 環境偵測：檢查是否被嵌入在 Google Sites (iframe) 中
+  function checkEmbedEnvironment() {
+    let isEmbedded = false;
+    try {
+      isEmbedded = (window.self !== window.top);
+    } catch (e) {
+      isEmbedded = true;
+    }
+
+    if (isEmbedded) {
+      // 1. 在 Google Sites 內隱藏易造成沙盒衝突的按鈕
+      const pickerBtn = document.getElementById('videoPickerBtn');
+      const audioBtn = document.getElementById('audioToggleBtn');
+      const focusBtn = document.getElementById('focusModeBtn');
+      if (pickerBtn) pickerBtn.style.display = 'none';
+      if (audioBtn) audioBtn.style.display = 'none';
+      if (focusBtn) focusBtn.style.display = 'none';
+
+      // 2. 顯示顯眼的直連獨立版按鈕
+      const openBtn = document.getElementById('openExternalBtn');
+      if (openBtn) openBtn.style.display = 'flex';
+    }
+  }
+
+  // 點擊直連跳轉至 GitHub 獨立頁面
+  function openOriginalSite() {
+    try {
+      const win = window.open(GITHUB_SITE_URL, '_blank');
+      if (!win || win.closed || typeof win.closed === 'undefined') {
+        window.top.location.href = GITHUB_SITE_URL;
+      }
+    } catch (e) {
+      window.top.location.href = GITHUB_SITE_URL;
+    }
+  }
+
+  // YouTube API 初始化
   function onYouTubeIframeAPIReady() {
     const cur = videoPool[currentVideoIndex];
     player = new YT.Player('player', {
@@ -1074,7 +1119,7 @@
     }
   }
 
-  // 16 張輪播大圖
+  // 16 張大圖輪播
   let currentSlide = 0;
   const totalSlides = 16;
 
@@ -1186,7 +1231,7 @@
     });
   }
 
-  // 跨網域送出：採用 form-urlencoded 封裝，保證 GAS doPost 順利寫入試算表
+  // 跨網域送出報名資料
   function handleFormSubmit(e) {
     e.preventDefault();
     const selectedCats = Array.from(document.querySelectorAll('input[name="categories"]:checked')).map(cb => cb.value);
@@ -1242,6 +1287,9 @@
       btn.innerText = "重新送出";
     });
   }
+
+  // 頁面載入時執行環境偵測
+  window.addEventListener('DOMContentLoaded', checkEmbedEnvironment);
 </script>
 
 </body>
