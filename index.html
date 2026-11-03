@@ -12,6 +12,7 @@
       --card-frosted: rgba(22, 24, 32, 0.75);
       --border-light: rgba(255, 255, 255, 0.16);
       --border-red: rgba(229, 9, 20, 0.55);
+      --gold-accent: #FFD700;
       --text-main: #FFFFFF;
       --text-sub: #D1D5DB;
     }
@@ -234,7 +235,64 @@
       text-transform: uppercase;
     }
     h1 { font-size: 27px; font-weight: 900; line-height: 1.35; margin-bottom: 14px; }
-    .slogan { font-size: 19px; font-weight: 800; color: #ff5252; margin-bottom: 14px; letter-spacing: 0.5px; }
+    .slogan { font-size: 19px; font-weight: 800; color: #ff5252; margin-bottom: 16px; letter-spacing: 0.5px; }
+
+    /* 國手榮耀狂賀戰報樣式 */
+    .honor-banner {
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(229, 9, 20, 0.18) 100%);
+      border: 1.5px solid rgba(255, 215, 0, 0.5);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin: 18px auto 24px;
+      max-width: 580px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 215, 0, 0.08);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .honor-banner::after {
+      content: "";
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(60deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+      transform: rotate(30deg);
+      pointer-events: none;
+    }
+    .honor-header {
+      font-size: 19px;
+      font-weight: 900;
+      color: #FFF;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+    }
+    .honor-sub {
+      font-size: 14px;
+      font-weight: 800;
+      color: #FFD700;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+    .honor-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+    }
+    .honor-item {
+      font-size: 15.5px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .lead-text { font-size: 15px; color: #e5e7eb; line-height: 1.8; margin-bottom: 12px; }
 
     /* 16:9 圖片輪播區塊 */
@@ -523,6 +581,8 @@
       .floating-tools { bottom: 25px; right: 16px; gap: 10px; }
       .tool-btn { padding: 12px 16px; font-size: 13.5px; }
       .video-picker-content { max-height: 80vh; }
+      .honor-header { font-size: 17px; }
+      .honor-item { font-size: 14.5px; }
     }
   </style>
 </head>
@@ -536,7 +596,7 @@
 
 <!-- 懸浮操作按鈕區 -->
 <div class="floating-tools">
-  <!-- 專為 Google Sites iframe 環境準備的跳轉按鈕（在 Google Sites 內自動亮起，獨立版自動隱藏） -->
+  <!-- 專為 Google Sites iframe 環境準備的跳轉按鈕 -->
   <button type="button" id="openExternalBtn" class="tool-btn" style="display: none; background: #E50914; border-color: #FFFFFF; font-size: 14px;" onclick="openOriginalSite()">
     <span>🚀</span> <span>前往獨立完整版 (開啟音效與全螢幕) ↗</span>
   </button>
@@ -586,6 +646,17 @@
       <div class="badge-pill">2027 MIXCIN Academy Repertory Company AUDITION</div>
       <h1>MIXCIN 2027 競演團徵選</h1>
       <div class="slogan">「站上國際競演舞台，專屬規劃孩子升學就業未來」</div>
+
+      <!-- 🏆 國手榮耀狂賀戰報區塊 -->
+      <div class="honor-banner">
+        <div class="honor-header">🏆 狂賀 MIXCIN 中華隊國手 🇹🇼</div>
+        <div class="honor-sub">2026 亞錦賽暨亞太盃</div>
+        <div class="honor-list">
+          <div class="honor-item"><span>🥇</span> <span>團體青年冠軍</span></div>
+          <div class="honor-item"><span>🥈</span> <span>團體青少年亞軍</span></div>
+          <div class="honor-item"><span>🥉</span> <span>雙人組青少年季軍</span></div>
+        </div>
+      </div>
     </div>
 
     <p class="lead-text">
@@ -956,7 +1027,7 @@
   let isAudioPlaying = false;
   let isFocusMode = false;
 
-  // 🔴 環境偵測：檢查是否被嵌入在 Google Sites (iframe) 中
+  // 環境偵測：檢查是否被嵌入在 Google Sites (iframe) 中
   function checkEmbedEnvironment() {
     let isEmbedded = false;
     try {
@@ -966,7 +1037,6 @@
     }
 
     if (isEmbedded) {
-      // 1. 在 Google Sites 內隱藏易造成沙盒衝突的按鈕
       const pickerBtn = document.getElementById('videoPickerBtn');
       const audioBtn = document.getElementById('audioToggleBtn');
       const focusBtn = document.getElementById('focusModeBtn');
@@ -974,7 +1044,6 @@
       if (audioBtn) audioBtn.style.display = 'none';
       if (focusBtn) focusBtn.style.display = 'none';
 
-      // 2. 顯示顯眼的直連獨立版按鈕
       const openBtn = document.getElementById('openExternalBtn');
       if (openBtn) openBtn.style.display = 'flex';
     }
